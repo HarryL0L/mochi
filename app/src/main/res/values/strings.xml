@@ -6,6 +6,7 @@
     <string name="service_text">Tap to adjust. Mochi naps while there is nothing to show.</string>
     <string name="stop">Stop</string>
 
+    <string name="face_description">Mochi. Tap to wink.</string>
     <string name="hero_title_on">Awake</string>
     <string name="hero_title_off">Asleep</string>
     <string name="hero_title_setup">Almost ready</string>
