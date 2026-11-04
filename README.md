@@ -1,135 +1,196 @@
+<div align="center">
+
+<img src="docs/assets/logo.png" width="104" alt="Mochi app icon: a small black pill with a smiling face">
+
 # Mochi
 
-A soft, squishy Dynamic Island–style overlay for Android 10+ phones with a hole-punch camera.
-Mochi wraps the camera in a black pill that fluidly morphs to show:
+**A soft, squishy Dynamic Island for Android.**<br>
+Music, timers, downloads and your earbuds, wrapped neatly around your camera.
 
-| Trigger | Compact pill | Expanded card |
-| --- | --- | --- |
-| Music session (Spotify, YouTube Music, …) | album art + animated bars | art, title, artist, progress, ⏮ ⏯ ⏭ |
-| Bluetooth earbuds or headphones | earbud icon + battery % | battery ring, name, "Connected · 82%" |
-| Wired headphones plugged in / removed | headset icon | "Connected" / "Disconnected" |
-| Charger connected / removed | bolt + % | pulsing bolt, battery ring, "Charging" |
-| App notifications | app icon + title | app icon, title, two lines of text; tap opens, swipe up dismisses |
-| Live activities: stopwatch, timer, calls, navigation | icon + running time | title, text, big running clock |
-| Downloading, uploading, extracting, compressing (archiving), copying | progress ring with an animated arrow / box + % | ring, app badge, title, wavy progress bar |
+<a href="app/release/mochi-v1.5.apk"><img alt="Download the APK, version 1.5" src="https://img.shields.io/badge/Download-APK%20v1.5-111118?style=for-the-badge&logo=android&logoColor=white"></a>
 
-While music plays with earbuds connected, the earbud battery sits in a small **companion bubble**
-that splits off from the music pill, like the iOS island. When a stopwatch runs during music, the
-stopwatch takes the pill and the album art moves into the bubble.
+<img alt="Android 10 and up" src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white">
+<img alt="Material 3 Expressive" src="https://img.shields.io/badge/Material%203-Expressive-6750A4?style=flat-square&logo=materialdesign&logoColor=white">
+<img alt="Written in Kotlin" src="https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white">
+<img alt="No internet permission" src="https://img.shields.io/badge/Internet-not%20used-111118?style=flat-square">
 
-## Fits the camera automatically
+<br><br>
 
-The island reads the screen size and the camera cutout straight from Android (`DisplayCutout`,
-using the exact cutout shape on Android 12+). The pill is the camera height plus an even ring, and
-its rounded end is concentric with the camera. It re-fits on rotation, resolution and display-size
-changes. Without a top camera, for example in landscape, it floats at the top centre. The settings
-screen shows exactly what Android reported. The nudge sliders are only for fine-tuning.
+<img src="docs/assets/hero.png" width="100%" alt="Mochi's settings screen and its expanded music card on Android">
 
-Some phones (for example Realme and OPPO models) report a hole-punch camera as a padded box running into the screen corner (about
-150 × 108 px from the top-left corner on a 1080 px wide screen), not as the hole itself. A real hole never
-touches the screen edge, so the island treats such a box as padding and estimates the hole inside
-it. For an exact fit, tap **Line up with camera**: drag a ring onto the black camera hole on a
-bright full-screen canvas, size it, and save. The line-up is stored relative to screen width, so
-it survives resolution changes.
+</div>
 
-## Why Accessibility is needed for taps
+<br>
 
-Android draws normal app overlays *below* the status bar, so the status bar takes every tap on the
-island. Enabling **Accessibility → Mochi** moves it to an accessibility overlay above the
-status bar, so tap-to-expand, the media buttons and swipe-to-dismiss work. The service reads no
-screen content. It only watches window changes to hide the island while the notification shade or
-lock screen is open. On Android 13+ a sideloaded app's accessibility switch can be greyed out:
-open App info → ⋮ → **Allow restricted settings**, then turn it on.
+<table>
+<tr>
+<td width="33%" valign="top">
 
-## Material 3 Expressive
+### Fits your camera
 
-* The settings app uses the Material 3 Expressive theme from Material Components 1.14: a large
-  collapsing title, grouped rounded-segment lists, a connected button group for the position
-  picker, and Expressive buttons that change shape when pressed.
-* Material You: on Android 12+ the app takes its colours from your wallpaper, and the island's own
-  highlights can use the wallpaper accent too (Behaviour → Material You accent colours).
-* The island moves with the Material 3 Expressive motion scheme springs, and the music card shows
-  the Expressive wavy progress bar while playing.
-* The launcher icon includes a monochrome layer for Android 13+ themed icons.
+Mochi reads your camera's position from Android and wraps it perfectly. Need it exact? Line it up once by hand.
 
-## Battery design
+</td>
+<td width="33%" valign="top">
 
-* **No polling.** Everything is driven by broadcasts (Bluetooth profile state, headset plug,
-  charger, screen on/off) and MediaSession callbacks.
-* **Zero overlay cost when idle.** The window is removed from the WindowManager when there is
-  nothing to show, and whenever the screen turns off.
-* **Tight window.** The overlay window is sized to the pill, so the status bar and shade gestures
-  keep working and nothing is composited beyond the pill.
-* Spring animations settle and stop; the only continuous animation is the 3‑bar visualizer
-  (≈11 fps, compact music pill only, can be switched off).
-* The overlay window is only resized when the island's shape really changes, and its camera-side
-  edge never moves, so frequent media, battery and timer updates cause no jitter.
-* Stopwatch and timer pills redraw once per second, exactly on the second.
-* Album art is downscaled once per track; the accent colour is extracted off the main thread.
-* Foreground service notification uses the lowest importance channel.
+### Fluid by design
 
-## Project layout
+Every change morphs with Material 3 Expressive springs. Mochi squishes, grows and settles instead of popping.
 
-```
-app/src/main/java/com/harryl/island/
-  IslandView.kt               Canvas renderer + spring morphing + gestures
-  IslandLayout.kt             Pure camera-fitting maths (unit tested)
-  IslandGeometry.kt           Screen size, status bar and camera cutout from Android
-  IslandOverlay.kt            WindowManager host, window sizing, display-change refits
-  IslandAccessibilityService.kt  Above-status-bar overlay host + shade detection
-  IslandService.kt            Foreground service / state machine
-  MediaWatcher.kt             MediaSessionManager → IslandContent.Music
-  DeviceReceiver.kt           Bluetooth, wired headset, charger, screen broadcasts
-  IslandNotificationListener.kt  Notification access + app notifications
-  MainActivity.kt             Setup checklist, position tuning, previews
-  Prefs.kt / IslandModels.kt  Settings and data classes
-```
+</td>
+<td width="33%" valign="top">
 
-## Build
+### Light on battery
 
-Open the folder in Android Studio (Ladybug or newer) and run, or:
+No polling and no idle drawing. When there is nothing to show, Mochi is gone until something happens.
+
+</td>
+</tr>
+</table>
+
+<br>
+
+## Music that moves with you
+
+Album art and live bars sit beside the camera while a song plays. Tap the pill to open a card with the track, playback controls and a wavy progress bar.
+
+<p align="center"><img src="docs/assets/music.png" width="88%" alt="Expanded music card with album art, title, artist, controls and a wavy progress bar"></p>
+<p align="center"><sub>Screenshot</sub></p>
+
+<p align="center"><img src="docs/assets/pills.png" width="70%" alt="Compact pills: music with an earbud battery bubble, a download at 40 percent and a stopwatch at 01:23"></p>
+<p align="center"><sub>Illustration of the compact pills</sub></p>
+
+## Downloads, uploads and archives at a glance
+
+Mochi notices ongoing transfers in any app and gives each one its own animated icon inside a progress ring.
+
+| | |
+| --- | --- |
+| **Downloading** | An arrow drops into a tray |
+| **Uploading** | An arrow rises out of a tray |
+| **Extracting** | An arrow lifts out of a zipped box |
+| **Compressing** | An arrow drops into a zipped box |
+| **Copying or moving** | Two sheets slide past each other |
+
+<p align="center"><img src="docs/assets/transfers.png" width="100%" alt="Expanded cards for downloading, uploading, extracting and compressing, each with its own icon, colour and percentage"></p>
+<p align="center"><sub>Illustration</sub></p>
+
+## Live activities
+
+Stopwatches, timers, calls and navigation turn into a pill with a running clock. When a live activity starts, Mochi opens for a moment, then settles. Any music playing moves into a small bubble beside it.
+
+<p align="center"><img src="docs/assets/stopwatch.png" width="88%" alt="A stopwatch pill showing 01:23 and its expanded card"></p>
+<p align="center"><sub>Illustration</sub></p>
+
+## Your earbuds, wired or wireless
+
+Connect your earbuds and Mochi shows their name and battery in a ring, then tucks the percentage into a bubble next to the music. Wired and USB-C earphones are detected too, and plugging in a charger shows your battery.
+
+<p align="center"><img src="docs/assets/devices.png" width="88%" alt="Cards for wireless earbuds at 82 percent and for charging at 64 percent"></p>
+<p align="center"><sub>Illustration</sub></p>
+
+## Notifications, politely
+
+New messages slide out from the camera with the app icon and two lines of text. Tap to open, swipe up to dismiss. Silent and repeat alerts stay quiet.
+
+## Made for Material 3 Expressive
+
+The settings app uses the latest Material 3 Expressive design: a large collapsing title, grouped rounded lists and connected button groups. Buttons change shape when you press them. On Android 12 and up, the colours come from your wallpaper.
+
+<p align="center"><img src="docs/assets/settings.png" width="88%" alt="Mochi's settings: a hero card with the main switch, preview chips and grouped setup rows"></p>
+<p align="center"><sub>Screenshots</sub></p>
+
+<br>
+
+## Built to sip battery
+
+- **Event driven.** Music, Bluetooth, chargers and the screen all notify Mochi. It never checks on a timer.
+- **Nothing on screen when idle.** The overlay window is removed when there is nothing to show and whenever the screen is off.
+- **Small window.** The overlay is only as big as the pill, so the status bar keeps working around it.
+- **Animations that stop.** Springs settle and sleep. Transfer icons move in short bursts, and the music bars can be turned off.
+- **Private by default.** Mochi has no internet permission, so nothing leaves your phone.
+
+<br>
+
+## Get started
+
+1. **Install** the [latest APK](app/release/mochi-v1.5.apk) on your phone.
+2. **Grant access** from the Setup list in the app. Accessibility puts Mochi above the status bar so it can be tapped. Notification access lets it see music and live activities.
+3. **Wake Mochi up** with the switch at the top, then tap a preview chip to see each style.
+
+> [!TIP]
+> On Android 13 and up, a sideloaded app's accessibility switch can be greyed out. Open App info, tap the ⋮ menu, choose **Allow restricted settings**, then try again.
+
+<details>
+<summary><b>Keeping Mochi awake on phones that close background apps</b></summary>
+<br>
+
+- App info → Battery usage → Allow background activity
+- App info → Auto-launch → On
+- Settings → Battery → App battery management → Mochi → Don't optimise
+- In recents, swipe down on Mochi's card and tap Lock
+
+</details>
+
+<details>
+<summary><b>What each permission is for</b></summary>
+<br>
+
+| Permission | Why Mochi needs it |
+| --- | --- |
+| Accessibility | Draws the island above the status bar so taps work, and hides it while the notification shade or lock screen is open. It reads no screen content. |
+| Notification access | Reads music sessions, notifications and ongoing activities such as timers and downloads. |
+| Nearby devices | Reads the name and battery level of connected Bluetooth earbuds. |
+| Display over other apps | Fallback when accessibility is off. The island shows, but taps go to the status bar. |
+| Unrestricted battery | Stops the system from closing Mochi in the background. |
+| Notifications | Shows the small, silent notice Android requires for a background service. |
+
+</details>
+
+<br>
+
+## How it fits the camera
+
+Mochi asks Android for the display cutout and uses the exact cutout shape when the phone provides one. The pill is the camera height plus an even ring, with its rounded end centred on the lens. It re-fits after rotation and display changes. Without a top camera, for example in landscape, it floats at the top centre.
+
+Some phones report the camera as a padded box running into the screen corner rather than the hole itself. A real camera never touches the screen edge, so Mochi estimates the hole inside that box and keeps text clear of the whole area. For a perfect fit, open **Position → Line up with camera** and drag a ring onto the lens. The line-up is stored relative to screen width, so it survives resolution changes.
+
+## Build from source
+
+Requires JDK 17 or newer and Android SDK 35.
 
 ```
 ./gradlew assembleDebug
-./gradlew testDebugUnitTest   # camera-fitting tests
+./gradlew testDebugUnitTest
 adb install app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Requires JDK 17+, compileSdk 34.
+<details>
+<summary><b>Project layout</b></summary>
+<br>
 
-## Setup on the phone
+```
+app/src/main/java/com/harryl/island/
+  IslandView.kt                  Canvas renderer, spring morphing and gestures
+  IslandLayout.kt                Camera-fitting maths (unit tested)
+  IslandGeometry.kt              Screen, status bar and camera cutout from Android
+  IslandOverlay.kt               Overlay window and display-change refits
+  IslandService.kt               Foreground service and state machine
+  IslandAccessibilityService.kt  Above-status-bar overlay and shade detection
+  IslandNotificationListener.kt  Notifications and live activities
+  Transfer.kt                    Download, upload, extract and compress detection (unit tested)
+  MediaWatcher.kt                Music sessions
+  DeviceReceiver.kt              Bluetooth, wired audio, charger and screen events
+  CalibrateActivity.kt           Line up with camera
+  MainActivity.kt                Settings
+```
 
-1. Open **Mochi** and grant, in order:
-   * Accessibility (needed for taps; see above)
-   * Notification access (needed for music, notifications and live activities)
-   * Nearby devices (Bluetooth) – Android 12+
-   * Show service notification – Android 13+
-   * Unrestricted battery
-   * Display over other apps (only a fallback if Accessibility stays off)
-2. Turn on **Island enabled**.
-3. Tap a **Preview** chip to see each style. Previews never change the real device state.
+</details>
 
-### Keeping Mochi awake
+<br>
 
-Some phones close background apps aggressively. Also do:
-
-* App info → **Battery usage → Allow background activity**
-* App info → **Auto‑launch → On**
-* Settings → Battery → App battery management → Mochi → **Don't optimise**
-* In recents, swipe down on Mochi's card and tap **Lock**
-
-The notification‑listener service doubles as an auto‑start hook: the system binds it at boot,
-which restarts the island even when `BOOT_COMPLETED` is blocked.
-
-## Earbud battery
-
-Most wireless earbuds report battery over the HFP profile (`AT+IPHONEACCEV`). Android exposes it through
-the hidden `BluetoothDevice.getBatteryLevel()` / `BATTERY_LEVEL_CHANGED` broadcast, which this
-app reads with reflection. It works on Android 10–14. If the percentage shows as
-"Connected" without a number, the device didn't report a level yet; it updates as soon as the
-earbuds send one.
-
-Connected devices are seeded from the Bluetooth profiles' real connected-device lists when the
-island starts, and cleared when Bluetooth turns off, so a device can never get stuck as "connected".
-Wired and USB‑C earphones and dongles are detected through Android's audio-device callback,
-because many phones have no 3.5 mm jack.
+<div align="center">
+<img src="docs/assets/logo.png" width="48" alt="">
+<br>
+<sub>Mochi · a little island for your camera</sub>
+</div>
