@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.harryl.island
 
 /** What a progress notification is doing, so the island can pick a fitting icon and animation. */

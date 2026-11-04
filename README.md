@@ -7,12 +7,13 @@
 **A soft, squishy Dynamic Island for Android.**<br>
 Music, timers, downloads and your earbuds, wrapped neatly around your camera.
 
-<a href="app/release/mochi-v1.8.apk"><img alt="Download the APK, version 1.8" src="https://img.shields.io/badge/Download-APK%20v1.8-111118?style=for-the-badge&logo=android&logoColor=white"></a>
+<a href="app/release/mochi-v1.9.apk"><img alt="Download the APK, version 1.9" src="https://img.shields.io/badge/Download-APK%20v1.9-111118?style=for-the-badge&logo=android&logoColor=white"></a>
 
 <img alt="Android 10 and up" src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white">
 <img alt="Material 3 Expressive" src="https://img.shields.io/badge/Material%203-Expressive-6750A4?style=flat-square&logo=materialdesign&logoColor=white">
 <img alt="Written in Kotlin" src="https://img.shields.io/badge/Kotlin-2.0-7F52FF?style=flat-square&logo=kotlin&logoColor=white">
 <img alt="No internet permission" src="https://img.shields.io/badge/Internet-not%20used-111118?style=flat-square">
+<a href="LICENSE"><img alt="Licence: GPL-3.0 or later" src="https://img.shields.io/badge/Licence-GPL--3.0--or--later-blue?style=flat-square"></a>
 
 <br><br>
 
@@ -114,7 +115,7 @@ The settings app uses the latest Material 3 Expressive design: a large collapsin
 
 ## Get started
 
-1. **Install** the [latest APK](app/release/mochi-v1.8.apk) on your phone.
+1. **Install** the [latest APK](app/release/mochi-v1.9.apk) on your phone.
 2. **Grant access** from the Setup list in the app. Accessibility puts Mochi above the status bar so it can be tapped. Notification access lets it see music and live activities.
 3. **Wake Mochi up** with the switch at the top, then tap a preview chip to see each style.
 
@@ -206,10 +207,16 @@ app/src/main/java/com/harryl/island/
 
 </details>
 
+## Licence
+
+Mochi is free software. You can use, study, share and change it under the terms of the [GNU General Public License](LICENSE), version 3 or any later version. Mochi is distributed without any warranty; see the licence for details.
+
+Mochi uses AndroidX, Material Components for Android and the Kotlin standard library, all under the Apache License 2.0. Their notices are listed in the app under **About → Open-source licences**.
+
 <br>
 
 <div align="center">
 <img src="docs/assets/logo.png" width="48" alt="">
 <br>
-<sub>Mochi · a little island for your camera</sub>
+<sub>Mochi · a little island for your camera · made with love</sub>
 </div>

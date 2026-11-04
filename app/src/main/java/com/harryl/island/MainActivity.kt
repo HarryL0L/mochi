@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 package com.harryl.island
 
 import android.Manifest
@@ -37,6 +38,11 @@ class MainActivity : AppCompatActivity() {
         bindSwitches()
         bindPosition()
         bindPreview()
+        b.toolbar.inflateMenu(R.menu.main)
+        b.toolbar.setOnMenuItemClickListener {
+            if (it.itemId == R.id.menuAbout) startActivity(Intent(this, AboutActivity::class.java))
+            true
+        }
         ExpressiveList.style(b.permissionList)
         ExpressiveList.style(b.groupPosition)
         ExpressiveList.style(b.groupBehaviour)
