@@ -1,0 +1,9 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- A little island pill with a tap ripple. -->
+    <path android:fillColor="#FFFFFFFF" android:pathData="M7,4h10a3.5,3.5 0,0 1,0 7H7a3.5,3.5 0,0 1,0 -7z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,15m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.5" android:strokeLineCap="round"
+        android:pathData="M8,20.5Q12,23 16,20.5" />
+</vector>

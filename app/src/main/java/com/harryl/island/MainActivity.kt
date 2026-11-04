@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var b: ActivityMainBinding
     private lateinit var prefs: Prefs
     private val permissionRows = ArrayList<Pair<ItemPermissionBinding, () -> Boolean>>()
+    private lateinit var tileRow: ItemPermissionBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,6 +87,10 @@ class MainActivity : AppCompatActivity() {
         addRow(R.string.perm_overlay, R.string.perm_overlay_desc, { Settings.canDrawOverlays(this) }) {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
         }
+        // Quick Settings tile: never "granted", its button changes with the setup state.
+        tileRow = ItemPermissionBinding.inflate(LayoutInflater.from(this), b.permissionList, true)
+        tileRow.permTitle.setText(R.string.tile_row)
+        tileRow.permButton.setOnClickListener { onTileRowClick() }
     }
 
     private fun addRow(title: Int, desc: Int, check: () -> Boolean, grant: () -> Unit) {
@@ -96,7 +101,34 @@ class MainActivity : AppCompatActivity() {
         permissionRows += row to check
     }
 
+    private fun refreshTileRow() {
+        val ready = Taps.canSwitchOn(this)
+        tileRow.permDesc.setText(if (ready) R.string.tile_row_ready else R.string.tile_row_setup)
+        tileRow.permButton.setText(if (ready) R.string.tile_add else R.string.tile_copy)
+    }
+
+    private fun onTileRowClick() {
+        if (!Taps.canSwitchOn(this)) {
+            val clip = getSystemService(android.content.ClipboardManager::class.java)
+            clip.setPrimaryClip(android.content.ClipData.newPlainText("adb", Taps.grantCommand(this)))
+            Toast.makeText(this, R.string.tile_copied, Toast.LENGTH_LONG).show()
+            return
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            val sbm = getSystemService(android.app.StatusBarManager::class.java)
+            sbm.requestAddTileService(
+                android.content.ComponentName(this, TapsTileService::class.java),
+                getString(R.string.tile_label),
+                android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_tile_taps),
+                mainExecutor,
+            ) { }
+        } else {
+            Toast.makeText(this, R.string.tile_add_manual, Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun refresh() {
+        refreshTileRow()
         for ((row, check) in permissionRows) {
             val ok = check()
             row.permButton.isEnabled = !ok

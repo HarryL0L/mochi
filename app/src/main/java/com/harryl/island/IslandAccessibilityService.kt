@@ -24,6 +24,7 @@ class IslandAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         prefs = Prefs(this)
         instance = this
+        Taps.refreshTile(this)
         if (!prefs.enabled) return
         if (IslandService.running) IslandBus.post(IslandEvent.HostChanged) else IslandService.start(this)
     }
@@ -61,6 +62,7 @@ class IslandAccessibilityService : AccessibilityService() {
         instance = null
         if (shadeOpen) IslandBus.post(IslandEvent.Shade(false))
         IslandBus.post(IslandEvent.HostChanged)
+        Taps.refreshTile(this)
     }
 
     companion object {
