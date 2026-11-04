@@ -75,6 +75,7 @@ class DeviceReceiver(
             addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(Intent.ACTION_SCREEN_ON)
             addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
         }
         ContextCompat.registerReceiver(context, this, filter, ContextCompat.RECEIVER_EXPORTED)
         audio.registerAudioDeviceCallback(audioCallback, main)
@@ -103,6 +104,8 @@ class DeviceReceiver(
             Intent.ACTION_POWER_DISCONNECTED -> onPower(false)
             Intent.ACTION_SCREEN_ON -> sink(IslandEvent.Screen(true))
             Intent.ACTION_SCREEN_OFF -> sink(IslandEvent.Screen(false))
+            // Unlocked: the lock screen is gone, so the island may show again.
+            Intent.ACTION_USER_PRESENT -> sink(IslandEvent.Shade(false))
         }
     }
 

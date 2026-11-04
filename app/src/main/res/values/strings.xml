@@ -15,7 +15,7 @@
 
     <string name="section_setup">Setup</string>
     <string name="perm_a11y">Accessibility (tap to expand)</string>
-    <string name="perm_a11y_desc">Recommended. Puts Mochi above the status bar so taps, media buttons and swipes work. It reads no screen content. If the switch is greyed out: App info → ⋮ → Allow restricted settings.</string>
+    <string name="perm_a11y_desc">Recommended. Puts Mochi above the status bar so taps, media buttons and swipes work. Mochi asks for no screen access, so it can\'t read anything you see. If the switch is greyed out: App info → ⋮ → Allow restricted settings. If a payment app still refuses to open, turn this off while you pay. Mochi keeps showing; only taps pause.</string>
     <string name="perm_overlay">Display over other apps</string>
     <string name="perm_overlay_desc">Fallback when accessibility is off. Mochi shows, but the status bar takes the taps.</string>
     <string name="perm_notifications">Notification access</string>
@@ -29,7 +29,7 @@
     <string name="grant">Grant</string>
     <string name="granted">Granted</string>
     <string name="a11y_summary">Shows Mochi above the status bar so you can tap it.</string>
-    <string name="a11y_description">Mochi uses accessibility only to draw the island above the status bar, so it can be tapped, and to notice when the notification shade or lock screen is open so it can hide. It does not read, collect or send any screen content.</string>
+    <string name="a11y_description">Mochi uses accessibility only to draw the island above the status bar, so it can be tapped, and to notice when the notification shade or lock screen comes to the front so it can hide. It requests no access to screen content, so it cannot read what is on your screen, and it has no internet access.</string>
     <string name="need_host">Turn on Accessibility or Display over other apps first.</string>
 
     <string name="enable_island">Mochi</string>

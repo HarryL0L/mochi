@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Least privilege, declared to the system and visible to other apps' security checks:
+    - no canRetrieveWindowContent: Mochi cannot read anything on screen,
+    - no flags (no interactive-window access, no gestures, no key events),
+    - only window-state events, used just to notice the notification shade.
+    isAccessibilityTool stays false: it is reserved for services that help people with disabilities.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagRetrieveInteractiveWindows"
-    android:canRetrieveWindowContent="true"
+    android:canRetrieveWindowContent="false"
     android:description="@string/a11y_description"
-    android:notificationTimeout="150"
+    android:isAccessibilityTool="false"
+    android:notificationTimeout="100"
     android:summary="@string/a11y_summary" />
