@@ -207,7 +207,7 @@ class DeviceReceiver(
     }
 
     /**
-     * BluetoothDevice.getBatteryLevel() is a hidden API that Sony (WF-C500), OnePlus/Realme and most
+     * BluetoothDevice.getBatteryLevel() is a hidden API that most wireless earbuds and
      * HFP headsets populate. It is reachable through reflection on Android 10-14. Returns -1 when unknown.
      */
     private fun readBattery(device: BluetoothDevice): Int = try {

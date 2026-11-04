@@ -53,8 +53,12 @@ sealed class IslandContent {
         val progress: Int,
         val accent: Int,
         val contentIntent: PendingIntent?,
+        /** For progress activities: download, upload, extract, archive or copy. */
+        val transfer: TransferKind = TransferKind.NONE,
     ) : IslandContent() {
         override val expandKey: String get() = "live:$key"
+
+        val isTransfer: Boolean get() = kind == LiveKind.PROGRESS
 
         fun chronoText(now: Long = System.currentTimeMillis()): String? {
             if (chronoBase <= 0L) return null

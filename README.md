@@ -6,11 +6,12 @@ Mochi wraps the camera in a black pill that fluidly morphs to show:
 | Trigger | Compact pill | Expanded card |
 | --- | --- | --- |
 | Music session (Spotify, YouTube Music, …) | album art + animated bars | art, title, artist, progress, ⏮ ⏯ ⏭ |
-| Bluetooth earbuds or headphones (e.g. Sony WF‑C500) | earbud icon + battery % | battery ring, name, "Connected · 82%" |
+| Bluetooth earbuds or headphones | earbud icon + battery % | battery ring, name, "Connected · 82%" |
 | Wired headphones plugged in / removed | headset icon | "Connected" / "Disconnected" |
 | Charger connected / removed | bolt + % | pulsing bolt, battery ring, "Charging" |
 | App notifications | app icon + title | app icon, title, two lines of text; tap opens, swipe up dismisses |
-| Live activities: stopwatch, timer, calls, downloads, navigation | icon + running time / % | title, text, big running clock or progress bar |
+| Live activities: stopwatch, timer, calls, navigation | icon + running time | title, text, big running clock |
+| Downloading, uploading, extracting, compressing (archiving), copying | progress ring with an animated arrow / box + % | ring, app badge, title, wavy progress bar |
 
 While music plays with earbuds connected, the earbud battery sits in a small **companion bubble**
 that splits off from the music pill, like the iOS island. When a stopwatch runs during music, the
@@ -120,9 +121,9 @@ Some phones close background apps aggressively. Also do:
 The notification‑listener service doubles as an auto‑start hook: the system binds it at boot,
 which restarts the island even when `BOOT_COMPLETED` is blocked.
 
-## WF‑C500 battery
+## Earbud battery
 
-Sony earbuds report battery over the HFP profile (`AT+IPHONEACCEV`). Android exposes it through
+Most wireless earbuds report battery over the HFP profile (`AT+IPHONEACCEV`). Android exposes it through
 the hidden `BluetoothDevice.getBatteryLevel()` / `BATTERY_LEVEL_CHANGED` broadcast, which this
 app reads with reflection. It works on Android 10–14. If the percentage shows as
 "Connected" without a number, the device didn't report a level yet; it updates as soon as the

@@ -72,7 +72,7 @@
     <string name="haptics">Haptic tick when Mochi pops up</string>
     <string name="material_you">Material You accent colours</string>
     <string name="show_notifications">Show app notifications</string>
-    <string name="show_live">Show live activities (stopwatch, timer, calls, downloads, navigation)</string>
+    <string name="show_live">Show live activities (stopwatch, timer, calls, downloads, uploads, compressing, navigation)</string>
     <string name="hide_with_shade">Hide while the notification shade or lock screen is open</string>
     <string name="show_devices">Show headphones and earbuds</string>
     <string name="show_charging">Show charger connected</string>
@@ -84,6 +84,8 @@
     <string name="preview_notice">Notification</string>
     <string name="preview_charging">Charger</string>
     <string name="preview_stopwatch">Stopwatch</string>
+    <string name="preview_transfer">Transfer</string>
+    <string name="wireless_earbuds">Wireless earbuds</string>
     <string name="preview_requires_enable">Wake Mochi up first.</string>
     <string name="taps_blocked">Taps only work with Accessibility on. Without it the status bar takes the taps.</string>
 

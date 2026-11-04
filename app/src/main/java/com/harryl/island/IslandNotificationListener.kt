@@ -127,13 +127,19 @@ class IslandNotificationListener : NotificationListenerService() {
         val category = n.category
         val template = extras.getString(Notification.EXTRA_TEMPLATE).orEmpty()
         val clockApp = sbn.packageName in CLOCK_PACKAGES
+        val transfer = Transfer.classify(
+            title(n) + " " + text(n) + " " + (extras.getCharSequence(Notification.EXTRA_SUB_TEXT) ?: ""),
+            sbn.packageName,
+        )
 
         val kind = when {
             category == Notification.CATEGORY_CALL || template.contains("CallStyle") -> LiveKind.CALL
             category == CATEGORY_STOPWATCH -> LiveKind.STOPWATCH
             countDown || category == Notification.CATEGORY_ALARM -> LiveKind.TIMER
             category == Notification.CATEGORY_NAVIGATION -> LiveKind.NAVIGATION
-            progress >= 0 || category == Notification.CATEGORY_PROGRESS -> LiveKind.PROGRESS
+            // Also indeterminate bars ("Extracting…") and ongoing transfers named in the text.
+            progress >= 0 || indeterminate || category == Notification.CATEGORY_PROGRESS ||
+                transfer != TransferKind.NONE -> LiveKind.PROGRESS
             clockApp -> if (looksLikeTimer(n)) LiveKind.TIMER else LiveKind.STOPWATCH
             chrono -> LiveKind.OTHER
             else -> return null
@@ -159,6 +165,7 @@ class IslandNotificationListener : NotificationListenerService() {
             progress = progress,
             accent = accent,
             contentIntent = n.contentIntent,
+            transfer = transfer,
         )
     }
 

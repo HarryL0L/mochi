@@ -57,6 +57,7 @@ class IslandService : Service(), IslandView.Listener {
 
     private var lastHapticAt = 0L
     private var lastHapticKey: String? = null
+    private var previewTransfer = 0
 
     private val collapseRunnable = Runnable {
         transient = null
@@ -384,7 +385,28 @@ class IslandService : Service(), IslandView.Listener {
                     positionAt = SystemClock.elapsedRealtime(), speed = 1f, accent = 0xFFE0477B.toInt(),
                 ),
             )
-            PREVIEW_EARBUDS -> showTransient(IslandContent.Device("preview:wf", DeviceKind.EARBUDS, "WF-C500", 82, true))
+            PREVIEW_EARBUDS -> showTransient(
+                IslandContent.Device("preview:earbuds", DeviceKind.EARBUDS, getString(R.string.wireless_earbuds), 82, true),
+            )
+            PREVIEW_TRANSFER -> {
+                // Each tap shows the next kind, so all the animations can be seen.
+                val kinds = listOf(TransferKind.DOWNLOAD, TransferKind.UPLOAD, TransferKind.EXTRACT, TransferKind.ARCHIVE, TransferKind.COPY)
+                val kind = kinds[previewTransfer++ % kinds.size]
+                val (title, text) = when (kind) {
+                    TransferKind.DOWNLOAD -> "photos.zip" to "Downloading · 24 MB of 60 MB"
+                    TransferKind.UPLOAD -> "Holiday video" to "Uploading · 2 of 5"
+                    TransferKind.EXTRACT -> "photos.zip" to "Extracting 128 files"
+                    TransferKind.ARCHIVE -> "Project folder" to "Compressing to project.zip"
+                    else -> "5 files" to "Copying to SD card"
+                }
+                showTransient(
+                    IslandContent.Live(
+                        key = "preview:transfer", packageName = packageName, appName = "Files", title = title,
+                        text = text, icon = null, kind = LiveKind.PROGRESS, chronoBase = 0L, countDown = false,
+                        progress = 40, accent = 0xFF8B8BFF.toInt(), contentIntent = null, transfer = kind,
+                    ),
+                )
+            }
             PREVIEW_WIRED -> showTransient(
                 IslandContent.Device("preview:wired", DeviceKind.WIRED, getString(R.string.wired_headphones), -1, true),
             )
@@ -466,6 +488,7 @@ class IslandService : Service(), IslandView.Listener {
         const val PREVIEW_NOTICE = "notice"
         const val PREVIEW_CHARGING = "charging"
         const val PREVIEW_STOPWATCH = "stopwatch"
+        const val PREVIEW_TRANSFER = "transfer"
 
         private const val PAUSED_GRACE_MS = 30_000L
         private const val EXPANDED_MS = 7_000L

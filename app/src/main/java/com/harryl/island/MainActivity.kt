@@ -269,6 +269,7 @@ class MainActivity : AppCompatActivity() {
             b.previewNotice to IslandService.PREVIEW_NOTICE,
             b.previewCharging to IslandService.PREVIEW_CHARGING,
             b.previewStopwatch to IslandService.PREVIEW_STOPWATCH,
+            b.previewTransfer to IslandService.PREVIEW_TRANSFER,
         )
         for ((chip, kind) in map) chip.setOnClickListener { preview(kind) }
     }

@@ -201,6 +201,11 @@ class IslandView(
     }
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val wavePath = Path()
+    private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -593,7 +598,16 @@ class IslandView(
             else -> -1
         }
         // Wake exactly on the next second boundary of the stopwatch / timer.
-        is IslandContent.Live -> if (p.chronoBase > 0) 1000 - (abs(System.currentTimeMillis() - p.chronoBase) % 1000) + 5 else -1
+        is IslandContent.Live -> when {
+            p.chronoBase > 0 -> 1000 - (abs(System.currentTimeMillis() - p.chronoBase) % 1000) + 5
+            p.isTransfer && (expanded || p.progress < 0) -> 33 // wavy bar / spinning arc
+            p.isTransfer -> {
+                // 30 fps during the short glyph burst, then sleep until the next one.
+                val t = SystemClock.uptimeMillis() % TRANSFER_CYCLE_MS
+                if (t < TRANSFER_MOVE_MS) 33 else TRANSFER_CYCLE_MS - t + 1
+            }
+            else -> -1
+        }
         else -> -1
     }
 
@@ -670,7 +684,8 @@ class IslandView(
                 drawBars(canvas, rightX, cy, rightW, dp(16), c.accent, a, c.playing)
             }
             is IslandContent.Live -> {
-                drawArt(canvas, c.icon, leftX, cy - leftW / 2, leftW, leftW / 2, a, liveColor(c), liveIcon(c))
+                if (c.isTransfer) drawTransferBadge(canvas, c, leftX + leftW / 2, cy, leftW, a)
+                else drawArt(canvas, c.icon, leftX, cy - leftW / 2, leftW, leftW / 2, a, liveColor(c), liveIcon(c))
                 drawText(canvas, liveCompactText(c), rightX, cy, rightW, smallPaint, liveColor(c), a)
             }
             is IslandContent.Notice -> {
@@ -758,7 +773,16 @@ class IslandView(
         val size = dp(44)
         val iconTop = top + dp(10)
         val color = liveColor(c)
-        drawArt(canvas, c.icon, bl, iconTop, size, dp(10), a, color, liveIcon(c))
+        if (c.isTransfer) {
+            drawTransferBadge(canvas, c, bl + size / 2, iconTop + size / 2, size, a)
+            // The app that runs the job, as a small badge on the ring.
+            c.icon?.let {
+                val b = dp(18)
+                drawArt(canvas, it, bl + size - b + dp(3), iconTop + size - b + dp(3), b, b / 2, a, color)
+            }
+        } else {
+            drawArt(canvas, c.icon, bl, iconTop, size, dp(10), a, color, liveIcon(c))
+        }
 
         val big = c.chronoText() ?: (if (c.progress >= 0) "${c.progress}%" else null)
         var textRight = br
@@ -771,7 +795,7 @@ class IslandView(
         val tw = textRight - tx
         drawText(canvas, c.title, tx, iconTop + dp(13), tw, titlePaint, colorText, a)
         drawText(canvas, c.text, tx, iconTop + dp(32), tw, subPaint, colorDim, a)
-        if (c.progress >= 0) drawProgress(canvas, bl, br, iconTop + size + dp(12), c.progress / 100f, color, a)
+        if (c.progress >= 0) drawProgress(canvas, bl, br, iconTop + size + dp(12), c.progress / 100f, color, a, wavy = c.isTransfer)
     }
 
     /**
@@ -962,7 +986,142 @@ class IslandView(
     private fun liveColor(c: IslandContent.Live): Int = when (c.kind) {
         LiveKind.CALL -> colorGood
         LiveKind.STOPWATCH, LiveKind.TIMER -> colorTimer
+        LiveKind.PROGRESS -> transferColor(c.transfer)
         else -> colorText
+    }
+
+    private fun transferColor(t: TransferKind): Int = when (t) {
+        TransferKind.DOWNLOAD -> colorAccent
+        TransferKind.UPLOAD -> colorGood
+        TransferKind.EXTRACT, TransferKind.ARCHIVE -> colorMid
+        TransferKind.COPY, TransferKind.NONE -> colorAccent
+    }
+
+    // ---- Transfer badge: progress ring + animated glyph ----------------------------------------
+
+    /** 0..1 while the glyph is moving, or -1 while it rests. Short bursts keep the frame rate low. */
+    private fun transferPhase(): Float {
+        val t = SystemClock.uptimeMillis() % TRANSFER_CYCLE_MS
+        return if (t < TRANSFER_MOVE_MS) t / TRANSFER_MOVE_MS.toFloat() else -1f
+    }
+
+    private fun drawTransferBadge(canvas: Canvas, c: IslandContent.Live, cx: Float, cy: Float, size: Float, a: Float) {
+        val color = transferColor(c.transfer)
+        val stroke = max(dp(2), size * 0.085f)
+        val r = size / 2 - stroke / 2
+        tmpRect.set(cx - r, cy - r, cx + r, cy + r)
+
+        // Ring: determinate sweep, or a spinning arc for jobs of unknown length.
+        ringPaint.strokeWidth = stroke
+        trackPaint.strokeWidth = stroke
+        trackPaint.alpha = (51 * a).roundToInt()
+        canvas.drawOval(tmpRect, trackPaint)
+        ringPaint.color = color
+        ringPaint.alpha = (255 * a).roundToInt()
+        if (c.progress >= 0) {
+            val sweep = 360f * c.progress / 100f
+            if (sweep > 0.5f) canvas.drawArc(tmpRect, -90f, sweep, false, ringPaint)
+        } else {
+            val start = (SystemClock.uptimeMillis() % 1000L) / 1000f * 360f
+            canvas.drawArc(tmpRect, start - 90f, 100f, false, ringPaint)
+        }
+        ringPaint.strokeWidth = dp(3)
+        trackPaint.strokeWidth = dp(3)
+
+        // Glyph, clipped to the inside of the ring so moving arrows slide in and out.
+        val u = size * 0.27f
+        glyphPaint.strokeWidth = max(dp(1.4f), size * 0.075f)
+        glyphPaint.color = colorText
+        val p = transferPhase()
+        canvas.save()
+        clipPath.reset()
+        clipPath.addCircle(cx, cy, r - stroke / 2, Path.Direction.CW)
+        canvas.clipPath(clipPath)
+        when (c.transfer) {
+            TransferKind.DOWNLOAD -> {
+                drawTray(canvas, cx, cy, u, a)
+                drawMovingArrow(canvas, cx, cy - 0.15f * u, u, down = true, p = p, a = a)
+            }
+            TransferKind.UPLOAD -> {
+                drawTray(canvas, cx, cy, u, a)
+                drawMovingArrow(canvas, cx, cy - 0.15f * u, u, down = false, p = p, a = a)
+            }
+            TransferKind.EXTRACT -> {
+                drawBox(canvas, cx, cy, u, a)
+                drawMovingArrow(canvas, cx, cy - 0.55f * u, u * 0.75f, down = false, p = p, a = a)
+            }
+            TransferKind.ARCHIVE -> {
+                drawBox(canvas, cx, cy, u, a)
+                drawMovingArrow(canvas, cx, cy - 0.55f * u, u * 0.75f, down = true, p = p, a = a)
+            }
+            TransferKind.COPY, TransferKind.NONE -> drawSheets(canvas, cx, cy, u, p, a)
+        }
+        canvas.restore()
+    }
+
+    /** An open tray at the bottom of the glyph box. */
+    private fun drawTray(canvas: Canvas, cx: Float, cy: Float, u: Float, a: Float) {
+        glyphPaint.alpha = (255 * a).roundToInt()
+        wavePath.rewind()
+        wavePath.moveTo(cx - u, cy + 0.45f * u)
+        wavePath.lineTo(cx - u, cy + u)
+        wavePath.lineTo(cx + u, cy + u)
+        wavePath.lineTo(cx + u, cy + 0.45f * u)
+        canvas.drawPath(wavePath, glyphPaint)
+    }
+
+    /** A box with a zipper down the middle, for archives. */
+    private fun drawBox(canvas: Canvas, cx: Float, cy: Float, u: Float, a: Float) {
+        glyphPaint.alpha = (255 * a).roundToInt()
+        rectF.set(cx - u, cy - 0.05f * u, cx + u, cy + u)
+        canvas.drawRoundRect(rectF, u * 0.25f, u * 0.25f, glyphPaint)
+        val tooth = u * 0.16f
+        var y = cy + 0.15f * u
+        while (y < cy + 0.85f * u) {
+            canvas.drawLine(cx - tooth, y, cx + tooth, y, glyphPaint)
+            y += u * 0.3f
+        }
+    }
+
+    /**
+     * An arrow that travels in its direction during the burst, fading out at the far end and back
+     * in from the near end, then rests in place until the next burst.
+     */
+    private fun drawMovingArrow(canvas: Canvas, cx: Float, cy: Float, u: Float, down: Boolean, p: Float, a: Float) {
+        val travel = 0.9f * u
+        val shift: Float
+        val fade: Float
+        if (p < 0f) {
+            shift = 0f
+            fade = 1f
+        } else {
+            // Ease in-out over the burst; first half leaves, second half re-enters from behind.
+            val e = (1 - kotlin.math.cos(p * Math.PI).toFloat()) / 2
+            shift = if (e < 0.5f) e * 2 * travel else (e * 2 - 2) * travel
+            fade = if (e < 0.5f) 1 - e * 2 else (e - 0.5f) * 2
+        }
+        val dir = if (down) 1f else -1f
+        val oy = cy + dir * shift
+        glyphPaint.alpha = (255 * a * fade.coerceIn(0f, 1f)).roundToInt()
+        val tail = oy - dir * 0.75f * u
+        val tip = oy + dir * 0.55f * u
+        canvas.drawLine(cx, tail, cx, tip, glyphPaint)
+        wavePath.rewind()
+        wavePath.moveTo(cx - 0.45f * u, tip - dir * 0.45f * u)
+        wavePath.lineTo(cx, tip)
+        wavePath.lineTo(cx + 0.45f * u, tip - dir * 0.45f * u)
+        canvas.drawPath(wavePath, glyphPaint)
+    }
+
+    /** Two sheets; the front one slides across during the burst, for copy / move jobs. */
+    private fun drawSheets(canvas: Canvas, cx: Float, cy: Float, u: Float, p: Float, a: Float) {
+        glyphPaint.alpha = (150 * a).roundToInt()
+        rectF.set(cx - 0.95f * u, cy - 0.95f * u, cx + 0.35f * u, cy + 0.55f * u)
+        canvas.drawRoundRect(rectF, u * 0.2f, u * 0.2f, glyphPaint)
+        val slide = if (p < 0f) 0f else kotlin.math.sin(p * Math.PI).toFloat() * 0.25f * u
+        glyphPaint.alpha = (255 * a).roundToInt()
+        rectF.set(cx - 0.35f * u + slide, cy - 0.45f * u, cx + 0.95f * u + slide, cy + 0.95f * u)
+        canvas.drawRoundRect(rectF, u * 0.2f, u * 0.2f, glyphPaint)
     }
 
     private fun liveIcon(c: IslandContent.Live): Int = when (c.kind) {
@@ -1118,6 +1277,8 @@ class IslandView(
         private const val EFFECTS_SLOW_STIFFNESS = 800f
 
         private const val WAVE_PERIOD_MS = 1600L
+        private const val TRANSFER_CYCLE_MS = 2400L
+        private const val TRANSFER_MOVE_MS = 900L
         private const val TWO_PI = (2 * Math.PI).toFloat()
     }
 }
