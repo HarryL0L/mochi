@@ -111,6 +111,7 @@ class IslandOverlay(
     override fun attach(): Boolean {
         if (attached) return true
         attached = runCatching { wm.addView(view, lp) }.isSuccess
+        if (!attached) IslandDebug.add("System refused the island window")
         if (!attached && windowType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
             // The accessibility host is probably going away: rebuild with whatever host exists now.
             val now = android.os.SystemClock.elapsedRealtime()

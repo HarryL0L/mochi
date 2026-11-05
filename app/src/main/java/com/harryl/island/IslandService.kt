@@ -44,6 +44,8 @@ class IslandService : Service(), IslandView.Listener {
 
     private var music: IslandContent.Music? = null
     private var musicDismissedKey: String? = null
+    private var musicDismissedAt = 0L
+    private var lastStatus = ""
     private var pausedAt = 0L
     private val connected = LinkedHashMap<String, IslandContent.Device>()
     private val lives = LinkedHashMap<String, IslandContent.Live>()
@@ -121,8 +123,16 @@ class IslandService : Service(), IslandView.Listener {
                 if (calibrating) collapseRunnable.run() else render()
             }
             ACTION_RESYNC -> {
+                // Sent whenever Mochi's settings open and by "Wake the island": undo anything
+                // that could keep the island hidden, then look at everything afresh.
+                musicDismissedKey = null
+                dismissedLives.clear()
+                setShade(false)
+                media.restart()
                 devices.seedBluetooth()
                 IslandNotificationListener.instance?.resync()
+                IslandDebug.add("Woken up")
+                render()
             }
         }
         return START_STICKY
@@ -130,6 +140,8 @@ class IslandService : Service(), IslandView.Listener {
 
     override fun onDestroy() {
         running = false
+        IslandDebug.status = "Not running"
+        IslandDebug.add("Service stopped")
         handler.removeCallbacksAndMessages(null)
         IslandBus.detach()
         devices.unregister()
@@ -147,6 +159,7 @@ class IslandService : Service(), IslandView.Listener {
 
     private fun buildOverlay(): IslandOverlay {
         val a11y = IslandAccessibilityService.instance
+        IslandDebug.host = if (a11y != null) "Accessibility overlay (tappable)" else "App overlay (taps go to the status bar)"
         return if (a11y != null) {
             IslandOverlay(a11y, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, prefs, this)
         } else {
@@ -185,13 +198,17 @@ class IslandService : Service(), IslandView.Listener {
                 render()
             }
             is IslandEvent.Shade -> {
+                if (e.open != shadeOpen) IslandDebug.add(if (e.open) "Shade or lock screen in front" else "Shade closed")
                 setShade(e.open)
                 render()
             }
-            IslandEvent.HostChanged -> recreateOverlay()
+            IslandEvent.HostChanged -> {
+                IslandDebug.add("Accessibility host changed")
+                recreateOverlay()
+            }
             IslandEvent.ListenerConnected -> {
-                media.start()
-                media.refresh()
+                IslandDebug.add("Notification access connected")
+                media.restart()
             }
         }
     }
@@ -199,7 +216,11 @@ class IslandService : Service(), IslandView.Listener {
     private fun onMusic(m: IslandContent.Music?) {
         val old = music
         music = m
-        if (m != null && old != null && m.trackKey != old.trackKey) musicDismissedKey = null
+        // A swiped-away pill comes back on a new track or when playback is paused or resumed.
+        if (m != null && old != null && (m.trackKey != old.trackKey || m.playing != old.playing)) musicDismissedKey = null
+        if (m?.trackKey != old?.trackKey || m?.playing != old?.playing) {
+            IslandDebug.add(if (m == null) "Music: none" else "Music: ${m.title.take(24)} (${if (m.playing) "playing" else "paused"})")
+        }
         if (m != null && !m.playing && (old == null || old.playing || old.trackKey != m.trackKey)) {
             pausedAt = SystemClock.elapsedRealtime()
         }
@@ -268,7 +289,10 @@ class IslandService : Service(), IslandView.Listener {
 
     private fun currentMusic(): IslandContent.Music? {
         val m = music ?: return null
-        if (m.trackKey == musicDismissedKey) return null
+        if (m.trackKey == musicDismissedKey) {
+            if (SystemClock.elapsedRealtime() - musicDismissedAt < DISMISS_MS) return null
+            musicDismissedKey = null
+        }
         if (!m.playing) {
             if (!prefs.persistentMusic) return null
             val age = SystemClock.elapsedRealtime() - pausedAt
@@ -286,22 +310,46 @@ class IslandService : Service(), IslandView.Listener {
 
     private fun companionDevice(): IslandContent.Device? = connected.values.lastOrNull()
 
+    private fun status(text: String) {
+        IslandDebug.status = text
+        if (text != lastStatus) {
+            lastStatus = text
+            IslandDebug.add(text)
+        }
+    }
+
     private fun render() {
+        when {
+            !screenOn -> status("Hidden: screen off")
+            calibrating -> status("Hidden: line-up screen open")
+            shadeOpen && prefs.hideWithShade -> status("Hidden: notification shade or lock screen in front")
+            else -> Unit
+        }
         if (!screenOn || calibrating || (shadeOpen && prefs.hideWithShade)) {
             overlay.hide()
             return
         }
         val t = transient
         if (t != null) {
+            status("Showing: " + t.javaClass.simpleName.lowercase())
             overlay.present(t, null, expanded = true)
             return
         }
         val live = currentLive()
         val m = currentMusic()
         val primary: IslandContent = live ?: m ?: run {
+            val mu = music
+            status(
+                when {
+                    mu != null && mu.trackKey == musicDismissedKey -> "Hidden: music swiped away (back on play/pause, or open Mochi)"
+                    mu != null && !mu.playing -> "Hidden: music paused"
+                    else -> "Hidden: nothing to show"
+                },
+            )
             overlay.hide()
             return
         }
+        status(if (primary is IslandContent.Live) "Showing: live activity" else "Showing: music")
         val companion: IslandContent? = if (primary is IslandContent.Live) (m ?: companionDevice()) else companionDevice()
         overlay.present(primary, companion, expanded = expandedKey != null && expandedKey == primary.expandKey)
     }
@@ -343,10 +391,13 @@ class IslandService : Service(), IslandView.Listener {
             transient != null || expandedKey != null -> collapseRunnable.run()
             content is IslandContent.Music -> {
                 musicDismissedKey = content.trackKey
+                musicDismissedAt = SystemClock.elapsedRealtime()
+                IslandDebug.add("Music pill swiped away")
                 render()
             }
             content is IslandContent.Live -> {
                 dismissedLives += content.key
+                IslandDebug.add("Live activity swiped away")
                 render()
             }
         }
@@ -521,6 +572,7 @@ class IslandService : Service(), IslandView.Listener {
         private const val PAUSED_GRACE_MS = 30_000L
         private const val EXPANDED_MS = 7_000L
         private const val SHADE_MAX_MS = 8_000L
+        private const val DISMISS_MS = 10 * 60_000L
 
         @Volatile
         var running = false

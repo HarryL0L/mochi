@@ -31,6 +31,7 @@ class AboutActivity : AppCompatActivity() {
 
     private lateinit var privacy: LinearLayout
     private lateinit var phone: LinearLayout
+    private lateinit var status: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +51,7 @@ class AboutActivity : AppCompatActivity() {
         buildWhatsNew(findViewById(R.id.groupNew))
         privacy = findViewById(R.id.groupPrivacy)
         phone = findViewById(R.id.groupPhone)
+        status = findViewById(R.id.groupStatus)
         buildLinks(findViewById(R.id.groupLinks))
         buildLicences(findViewById(R.id.groupLicences))
     }
@@ -58,6 +60,7 @@ class AboutActivity : AppCompatActivity() {
         super.onResume()
         // Permissions can change while the user is away in Settings.
         buildPrivacy(privacy)
+        buildStatus(status)
         buildPhone(phone)
     }
 
@@ -91,12 +94,29 @@ class AboutActivity : AppCompatActivity() {
         ExpressiveList.style(group)
     }
 
+    /** Why the island is (not) showing right now, plus recent events. */
+    private fun buildStatus(group: LinearLayout) {
+        group.removeAllViews()
+        val running = IslandService.running
+        row(group, getString(R.string.status_now), if (running) IslandDebug.status else getString(R.string.status_not_running))
+        row(group, getString(R.string.status_host), if (running) IslandDebug.host else "–")
+        val events = IslandDebug.recent(12)
+        row(group, getString(R.string.status_events), if (events.isEmpty()) getString(R.string.about_none) else events.joinToString("\n"))
+        row(group, getString(R.string.status_wake), getString(R.string.status_wake_body)) {
+            if (IslandService.running) IslandService.resync(this) else if (Prefs(this).enabled) IslandService.start(this)
+            group.postDelayed({ buildStatus(group) }, 600)
+        }
+        ExpressiveList.style(group)
+    }
+
     private fun buildPhone(group: LinearLayout) {
         group.removeAllViews()
         val details = phoneDetails()
         for ((k, v) in details) row(group, k, v)
         row(group, getString(R.string.about_copy_details), getString(R.string.about_copy_details_body)) {
-            val text = details.joinToString("\n") { (k, v) -> "$k: $v" }
+            val text = details.joinToString("\n") { (k, v) -> "$k: $v" } +
+                "\nIsland: ${IslandDebug.status}\nHost: ${IslandDebug.host}\nRecent events:\n" +
+                IslandDebug.recent(40).joinToString("\n")
             getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Mochi details", text))
             Toast.makeText(this, R.string.about_copied, Toast.LENGTH_SHORT).show()
         }

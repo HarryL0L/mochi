@@ -61,6 +61,15 @@ class MediaWatcher(
         setController(null)
     }
 
+    /** Re-registers with the media system, e.g. after notification access reconnected. */
+    fun restart() {
+        // Re-register only; keeping the current controller avoids a hide/show blink.
+        if (started) runCatching { manager.removeOnActiveSessionsChangedListener(sessionsListener) }
+        started = false
+        start()
+        refresh()
+    }
+
     fun refresh() {
         try {
             pick(manager.getActiveSessions(component))

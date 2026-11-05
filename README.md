@@ -7,7 +7,7 @@
 **A soft, squishy Dynamic Island for Android.**<br>
 Music, timers, downloads and your earbuds, wrapped neatly around your camera.
 
-<a href="app/release/mochi-v1.9.1.apk"><img alt="Download the APK, version 1.9.1" src="https://img.shields.io/badge/Download-APK%20v1.9.1-111118?style=for-the-badge&logo=android&logoColor=white"></a>
+<a href="app/release/mochi-v1.9.2.apk"><img alt="Download the APK, version 1.9.2" src="https://img.shields.io/badge/Download-APK%20v1.9.2-111118?style=for-the-badge&logo=android&logoColor=white"></a>
 
 <img alt="Android 10 and up" src="https://img.shields.io/badge/Android-10%2B-3DDC84?style=flat-square&logo=android&logoColor=white">
 <img alt="Material 3 Expressive" src="https://img.shields.io/badge/Material%203-Expressive-6750A4?style=flat-square&logo=materialdesign&logoColor=white">
@@ -115,7 +115,7 @@ The settings app uses the latest Material 3 Expressive design: a large collapsin
 
 ## Get started
 
-1. **Install** the [latest APK](app/release/mochi-v1.9.1.apk) on your phone.
+1. **Install** the [latest APK](app/release/mochi-v1.9.2.apk) on your phone.
 2. **Grant access** from the Setup list in the app. Accessibility puts Mochi above the status bar so it can be tapped. Notification access lets it see music and live activities.
 3. **Wake Mochi up** with the switch at the top, then tap a preview chip to see each style.
 

@@ -273,7 +273,8 @@ class IslandView(
     private var downY = 0f
     private var downHit = Hit.NONE
     private var swiped = false
-    private val swipeThreshold = dp(28)
+    // Big enough that a tap with a little finger roll doesn't count as "swipe away".
+    private val swipeThreshold = dp(44)
     private val touchSlop = dp(12)
 
     init {
@@ -690,7 +691,14 @@ class IslandView(
         clipPath.addRoundRect(rectF, r, r, Path.Direction.CW)
         canvas.save()
         canvas.clipPath(clipPath)
-        if (expanded) drawExpanded(canvas, p, l, t, w, contentA) else drawCompact(canvas, p, t, h, contentA)
+        if (expanded) {
+            // Lay the content out where the card ends up and let the growing shape reveal it.
+            // Using the animating edge made everything slide sideways while a centred card grew.
+            val tg = target
+            drawExpanded(canvas, p, tg?.l ?: l, tg?.t ?: t, tg?.w ?: w, contentA)
+        } else {
+            drawCompact(canvas, p, t, h, contentA)
+        }
         canvas.restore()
     }
 
