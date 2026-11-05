@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug builds only: lets tests fake a playing song with adb. Not part of release builds. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <receiver
+            android:name=".DebugReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.harryl.island.debug.MUSIC" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

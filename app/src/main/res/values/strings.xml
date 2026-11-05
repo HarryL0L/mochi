@@ -57,6 +57,7 @@
         <item>Kotlin standard library</item>
     </string-array>
     <string-array name="whats_new_versions">
+        <item>1.9.3</item>
         <item>1.9.2</item>
         <item>1.9.1</item>
         <item>1.9</item>
@@ -67,6 +68,7 @@
         <item>1.4</item>
     </string-array>
     <string-array name="whats_new_notes">
+        <item>Fixes the island jumping sideways for a moment when tapped in landscape.</item>
         <item>Expanding no longer slides the card\'s content sideways. A swiped-away pill comes back. Island status in About.</item>
         <item>Steadier overlay window and shade handling.</item>
         <item>This About page.</item>

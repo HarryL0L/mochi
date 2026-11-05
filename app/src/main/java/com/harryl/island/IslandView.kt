@@ -125,6 +125,9 @@ class IslandView(
     private var noticeLayoutWidth = 0
 
     private val winRect = Rect()
+    private val screenLoc = IntArray(2)
+    /** Debug builds log frames where the window isn't where it was asked to be. */
+    private val debuggable = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
     private val retryHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var attachRetries = 0
 
@@ -278,6 +281,8 @@ class IslandView(
     private val touchSlop = dp(12)
 
     init {
+        // When the window moves or resizes, redraw against its new position.
+        viewTreeObserver.addOnGlobalLayoutListener { invalidate() }
         isClickable = true
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
@@ -668,7 +673,14 @@ class IslandView(
     override fun onDraw(canvas: Canvas) {
         if (!attached) return
         val p = primary ?: return
-        canvas.translate(-winRect.left.toFloat(), -winRect.top.toFloat())
+        // Draw relative to where the window really is, not where it was asked to go. The system
+        // applies a new window position a frame later; translating by the requested rect drew
+        // that frame shifted and cut off (the island jumped sideways when tapped in landscape).
+        getLocationOnScreen(screenLoc)
+        if (debuggable && (screenLoc[0] != winRect.left || screenLoc[1] != winRect.top)) {
+            android.util.Log.d("IslandDraw", "window at ${screenLoc[0]},${screenLoc[1]} but requested ${winRect.left},${winRect.top}")
+        }
+        canvas.translate(-screenLoc[0].toFloat(), -screenLoc[1].toFloat())
 
         val bgA = sBgA.value.coerceIn(0f, 1f)
         val contentA = (sContentA.value.coerceIn(0f, 1f) * bgA)
@@ -1205,8 +1217,9 @@ class IslandView(
             listener.onOutsideTouch()
             return false
         }
-        val x = event.x + winRect.left
-        val y = event.y + winRect.top
+        // Screen coordinates straight from the touch, independent of the window's position.
+        val x = event.rawX
+        val y = event.rawY
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = x
