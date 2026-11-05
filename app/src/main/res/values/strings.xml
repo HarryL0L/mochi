@@ -50,6 +50,7 @@
         <item>Kotlin standard library</item>
     </string-array>
     <string-array name="whats_new_versions">
+        <item>1.9.1</item>
         <item>1.9</item>
         <item>1.8</item>
         <item>1.7</item>
@@ -58,6 +59,7 @@
         <item>1.4</item>
     </string-array>
     <string-array name="whats_new_notes">
+        <item>Fixes the island flashing sideways when tapped in landscape, and staying hidden after closing the shade.</item>
         <item>This About page.</item>
         <item>Tap Mochi\'s face and it winks.</item>
         <item>Mochi taps Quick Settings tile for payment apps.</item>

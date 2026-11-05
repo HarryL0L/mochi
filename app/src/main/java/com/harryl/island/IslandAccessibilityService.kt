@@ -40,7 +40,8 @@ class IslandAccessibilityService : AccessibilityService() {
             ownPackage = packageName,
             current = shadeOpen,
         )
-        if (open != shadeOpen) {
+        // Re-report "open" every time: the island service may have timed the last one out.
+        if (open != shadeOpen || open) {
             shadeOpen = open
             IslandBus.post(IslandEvent.Shade(open))
         }

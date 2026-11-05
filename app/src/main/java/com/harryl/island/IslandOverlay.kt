@@ -48,7 +48,7 @@ class IslandOverlay(
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
-        gravity = Gravity.TOP or Gravity.START
+        gravity = Gravity.TOP or Gravity.LEFT
         layoutInDisplayCutoutMode = if (Build.VERSION.SDK_INT >= 30) {
             WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
         } else {
@@ -108,9 +108,18 @@ class IslandOverlay(
 
     override fun geometry(): IslandGeometry = geometry
 
-    override fun attach() {
-        if (attached) return
-        runCatching { wm.addView(view, lp) }.onSuccess { attached = true }
+    override fun attach(): Boolean {
+        if (attached) return true
+        attached = runCatching { wm.addView(view, lp) }.isSuccess
+        if (!attached && windowType == WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) {
+            // The accessibility host is probably going away: rebuild with whatever host exists now.
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastHostRetry > 5_000) {
+                lastHostRetry = now
+                IslandBus.post(IslandEvent.HostChanged)
+            }
+        }
+        return attached
     }
 
     override fun detach() {
@@ -119,12 +128,33 @@ class IslandOverlay(
         runCatching { wm.removeView(view) }
     }
 
-    override fun updateWindow(rect: Rect) {
-        lp.x = rect.left
+    override fun updateWindow(rect: Rect, side: Side) {
+        // Anchor the window on the edge that stays put. Absolute LEFT/RIGHT, so right-to-left
+        // languages don't mirror it.
+        val sw = geometry.screenW
+        when (side) {
+            Side.LEFT -> {
+                lp.gravity = Gravity.TOP or Gravity.LEFT
+                lp.x = rect.left
+            }
+            Side.RIGHT -> {
+                lp.gravity = Gravity.TOP or Gravity.RIGHT
+                lp.x = sw - rect.right
+            }
+            Side.CENTER -> {
+                lp.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+                lp.x = rect.centerX() - sw / 2
+            }
+        }
         lp.y = rect.top
         lp.width = maxOf(1, rect.width())
         lp.height = maxOf(1, rect.height())
         if (attached) runCatching { wm.updateViewLayout(view, lp) }
+    }
+
+    companion object {
+        @Volatile
+        private var lastHostRetry = 0L
     }
 
     private fun overlayContext(ctx: Context): Context {

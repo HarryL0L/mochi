@@ -67,6 +67,31 @@ class IslandService : Service(), IslandView.Listener {
     }
     private val reevaluate = Runnable { render() }
 
+    /**
+     * The shade is detected from window events alone, and closing it doesn't always send one.
+     * So "shade open" expires on its own after a few seconds, unless the phone really is locked.
+     */
+    private val shadeExpiry = object : Runnable {
+        override fun run() {
+            if (!shadeOpen) return
+            if (keyguardLocked()) {
+                handler.postDelayed(this, SHADE_MAX_MS)
+                return
+            }
+            shadeOpen = false
+            render()
+        }
+    }
+
+    private fun setShade(open: Boolean) {
+        shadeOpen = open
+        handler.removeCallbacks(shadeExpiry)
+        if (open) handler.postDelayed(shadeExpiry, SHADE_MAX_MS)
+    }
+
+    private fun keyguardLocked(): Boolean =
+        getSystemService(android.app.KeyguardManager::class.java)?.isKeyguardLocked == true
+
     override fun onCreate() {
         super.onCreate()
         running = true
@@ -155,10 +180,12 @@ class IslandService : Service(), IslandView.Listener {
             }
             is IslandEvent.Screen -> {
                 screenOn = e.on
+                // Screen on and not locked: whatever covered the island before is gone.
+                if (e.on && shadeOpen && !keyguardLocked()) setShade(false)
                 render()
             }
             is IslandEvent.Shade -> {
-                shadeOpen = e.open
+                setShade(e.open)
                 render()
             }
             IslandEvent.HostChanged -> recreateOverlay()
@@ -493,6 +520,7 @@ class IslandService : Service(), IslandView.Listener {
 
         private const val PAUSED_GRACE_MS = 30_000L
         private const val EXPANDED_MS = 7_000L
+        private const val SHADE_MAX_MS = 8_000L
 
         @Volatile
         var running = false

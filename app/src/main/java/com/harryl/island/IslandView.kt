@@ -52,9 +52,11 @@ class IslandView(
 
     interface Host {
         fun geometry(): IslandGeometry
-        fun attach()
+        /** Adds the window; false if the system refused it. */
+        fun attach(): Boolean
         fun detach()
-        fun updateWindow(rect: Rect)
+        /** [side] tells the host which window edge stays put, so moves never need a reposition. */
+        fun updateWindow(rect: Rect, side: Side)
     }
 
     interface Listener {
@@ -123,6 +125,8 @@ class IslandView(
     private var noticeLayoutWidth = 0
 
     private val winRect = Rect()
+    private val retryHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var attachRetries = 0
 
     // ---- Springs ------------------------------------------------------------------------------
 
@@ -337,7 +341,16 @@ class IslandView(
             }
             settleIfIdle()
         }
-        if (newlyAttached) host.attach()
+        if (newlyAttached && !host.attach()) {
+            // The system refused the window, e.g. while accessibility was switching. Retry shortly
+            // instead of believing the island is on screen.
+            attached = false
+            target = null
+            identity = null
+            if (attachRetries++ < 3) retryHandler.postDelayed({ if (!attached) present(content, companion, expanded) }, 1500)
+            return
+        }
+        if (newlyAttached) attachRetries = 0
         sBgA.to(1f)
         sContentA.to(1f)
         sRing.to(1f)
@@ -404,6 +417,7 @@ class IslandView(
     }
 
     fun cancelAll() {
+        retryHandler.removeCallbacksAndMessages(null)
         removeCallbacks(tick)
         tickScheduled = false
         pulseAnimator.cancel()
@@ -540,17 +554,31 @@ class IslandView(
      */
     private fun setWindow(r: RectF, grow: Boolean) {
         val overshoot = if (grow) dp(18) else 0f
-        val left = r.left - windowEdge - (if (side == Side.LEFT) 0f else overshoot)
-        val right = r.right + windowEdge + (if (side == Side.RIGHT) 0f else overshoot)
-        val next = Rect(
-            left.roundToInt().coerceAtLeast(0),
-            (r.top - windowEdge).roundToInt().coerceAtLeast(0),
-            right.roundToInt().coerceAtMost(screenW),
-            (r.bottom + windowEdge + (if (grow) dp(24) else 0f)).roundToInt().coerceAtMost(screenH),
-        )
+        val top = (r.top - windowEdge).roundToInt().coerceAtLeast(0)
+        val bottom = (r.bottom + windowEdge + (if (grow) dp(24) else 0f)).roundToInt().coerceAtMost(screenH)
+        // The edge the island grows away from never moves. Moving a window's position shows the
+        // old frame at the new spot for a moment (the island flashed sideways when tapped in
+        // landscape); a size-only change is synced with the new frame by the system.
+        val next = when (side) {
+            Side.LEFT -> Rect(
+                (r.left - windowEdge).roundToInt().coerceAtLeast(0), top,
+                (r.right + windowEdge + overshoot).roundToInt().coerceAtMost(screenW), bottom,
+            )
+            Side.RIGHT -> Rect(
+                (r.left - windowEdge - overshoot).roundToInt().coerceAtLeast(0), top,
+                (r.right + windowEdge).roundToInt().coerceAtMost(screenW), bottom,
+            )
+            Side.CENTER -> {
+                // Symmetric around the island's centre, so a centred window only changes width.
+                val cx = hole.centerX().roundToInt()
+                val reach = max(cx - (r.left - windowEdge - overshoot), (r.right + windowEdge + overshoot) - cx)
+                val half = min(reach.roundToInt() + 1, min(cx, screenW - cx))
+                Rect(cx - half, top, cx + half, bottom)
+            }
+        }
         if (next == winRect) return
         winRect.set(next)
-        host.updateWindow(next)
+        host.updateWindow(next, side)
         invalidate()
     }
 
