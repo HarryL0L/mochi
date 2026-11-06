@@ -98,13 +98,18 @@ data class IslandGeometry(
         }
 
         private fun screenSize(wm: WindowManager?, display: Display?): Point {
+            // The display's real size always follows the current rotation. A context's window
+            // metrics can lag behind a rotation (seen with the accessibility host in landscape).
+            val p = Point()
+            if (display != null) {
+                @Suppress("DEPRECATION")
+                display.getRealSize(p)
+                if (p.x > 0 && p.y > 0) return p
+            }
             if (Build.VERSION.SDK_INT >= 30 && wm != null) {
                 val b = wm.maximumWindowMetrics.bounds
                 return Point(b.width(), b.height())
             }
-            val p = Point()
-            @Suppress("DEPRECATION")
-            display?.getRealSize(p)
             return p
         }
 

@@ -125,8 +125,10 @@ class IslandView(
     private var noticeLayoutWidth = 0
 
     private val winRect = Rect()
-    private val screenLoc = IntArray(2)
-    /** Debug builds log frames where the window isn't where it was asked to be. */
+    /** Island coordinates → view coordinates, worked out each frame from the window as it is. */
+    private var drawDx = 0f
+    private var drawDy = 0f
+    /** Debug builds log frames where the window size isn't the one asked for yet. */
     private val debuggable = context.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
     private val retryHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private var attachRetries = 0
@@ -593,6 +595,29 @@ class IslandView(
         post { if (springs.none { it.running }) onSpringEnd() }
     }
 
+    /**
+     * Anchor the drawing to the window edge that stays put, using the window's actual size at
+     * draw time rather than the size or position just requested:
+     *  - camera on the left: the window's left edge,
+     *  - camera on the right: its right edge,
+     *  - centred island: the window's centre (the system centres the window on the screen).
+     * The system can apply a new window size or position a frame late, and absolute screen
+     * coordinates can disagree with where it really places the window in landscape. Both made the
+     * centred island jump sideways when tapped. Measuring from the window itself avoids both.
+     */
+    private fun updateDrawOffset() {
+        val w = width
+        drawDy = -winRect.top.toFloat()
+        drawDx = when {
+            w <= 0 || side == Side.LEFT -> -winRect.left.toFloat()
+            side == Side.RIGHT -> w - winRect.right.toFloat()
+            else -> w / 2f - hole.centerX()
+        }
+        if (debuggable && w > 0 && w != winRect.width()) {
+            android.util.Log.d("IslandDraw", "window is $w px wide, asked for ${winRect.width()} px")
+        }
+    }
+
     private fun onSpringEnd() {
         if (springs.any { it.running }) return
         if (hiding) {
@@ -673,14 +698,8 @@ class IslandView(
     override fun onDraw(canvas: Canvas) {
         if (!attached) return
         val p = primary ?: return
-        // Draw relative to where the window really is, not where it was asked to go. The system
-        // applies a new window position a frame later; translating by the requested rect drew
-        // that frame shifted and cut off (the island jumped sideways when tapped in landscape).
-        getLocationOnScreen(screenLoc)
-        if (debuggable && (screenLoc[0] != winRect.left || screenLoc[1] != winRect.top)) {
-            android.util.Log.d("IslandDraw", "window at ${screenLoc[0]},${screenLoc[1]} but requested ${winRect.left},${winRect.top}")
-        }
-        canvas.translate(-screenLoc[0].toFloat(), -screenLoc[1].toFloat())
+        updateDrawOffset()
+        canvas.translate(drawDx, drawDy)
 
         val bgA = sBgA.value.coerceIn(0f, 1f)
         val contentA = (sContentA.value.coerceIn(0f, 1f) * bgA)
@@ -1217,9 +1236,9 @@ class IslandView(
             listener.onOutsideTouch()
             return false
         }
-        // Screen coordinates straight from the touch, independent of the window's position.
-        val x = event.rawX
-        val y = event.rawY
+        // Exactly the inverse of the drawing offset, so taps always land on what is drawn.
+        val x = event.x - drawDx
+        val y = event.y - drawDy
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 downX = x

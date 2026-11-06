@@ -13,8 +13,8 @@ android {
         applicationId = "com.harryl.island"
         minSdk = 29
         targetSdk = 34
-        versionCode = 14
-        versionName = "1.9.3"
+        versionCode = 15
+        versionName = "1.9.4"
     }
 
     buildTypes {
